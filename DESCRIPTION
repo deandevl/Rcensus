@@ -1,0 +1,17 @@
+Package: Rcensus
+Title: Interface to the US Census Bureau API
+Version: 0.0.0.9000
+Date: 2022-02-03
+Author: Rick Dean
+Maintainer: Rick Dean <deanfruit@bardstown.com>
+Description: Provides a number of functions obtain metadata and
+     raw data on a number of data sets maintained by the Bureau.
+Imports: httr, data.table, jsonlite
+License: file LICENSE
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.1.2
+Suggests: 
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3

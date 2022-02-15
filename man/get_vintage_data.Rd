@@ -8,16 +8,15 @@ get_vintage_data(
   dataset,
   vintage = NULL,
   vars,
+  vars_init = c("GEO_ID", "NAME"),
   group = NULL,
+  group_values = c("estimate", "moe"),
   region = NULL,
   regionin = NULL,
   na_cols = NULL,
-  suffixes = NULL,
+  shape = "long",
   melt_meas = NULL,
-  melt_var_name = "variable",
-  melt_val_name = "value",
-  dcast_for = NULL,
-  dcast_var = NULL,
+  melt_values = NULL,
   key = Sys.getenv("CENSUS_KEY")
 )
 }
@@ -26,11 +25,19 @@ get_vintage_data(
 
 \item{vintage}{An optional numeric that sets the year of interest.}
 
-\item{vars}{A string vector of variable names to be acquired.}
+\item{vars}{Can be either a string vector of variable names to be acquired.
+Also can be a named list of string vectors to separate groups of variables.}
+
+\item{vars_init}{A string vector of variable names to append to \code{vars}, The default
+is \code{c("GEO_ID", "NAME")}. Set it to NULL to disregard it.}
 
 \item{group}{A string that names the group that has a collection of variables. A dataframe
 is returned in the "long" format with a factor column named "variables" with their respective
 values.}
+
+\item{group_values}{A string vector that sets the type of output values.
+Permissible values are "estimate" (for estimates) "moe" (for margin of error).
+The default is \code{c("estimate", "moe")} for both.}
 
 \item{region}{A string that specifies the geography of the request.
 See \code{Rcensus::get_geography()} for assistance in obtaining
@@ -41,26 +48,15 @@ these values.}
 \item{na_cols}{If TRUE will remove all rows with missing values. If a
 vector of column names/integers will check their values for missing values.}
 
-\item{suffixes}{A vector string where column names ending with the suffixes will be kept.}
+\item{shape}{A string that sets the shape of the returned dataframe. Permissible
+values are "long" (the default) or "wide".}
 
 \item{melt_meas}{A \code{list} that contains character vectors of column names/indexes from
 \code{dataset} to be consolidated. It is the \code{measure.vars} argument in data.table's
 wide-to-long \href{https://rdatatable.gitlab.io/data.table/reference/melt.data.table.html}{melt}
 reshaping tool.}
 
-\item{melt_var_name}{A character string (or character vector) that defines the new name(s) of the
-consolidated variable name column.}
-
-\item{melt_val_name}{A character string (or character vector) that defines the new name(s) of the
-consolidated value column(s) defined in \code{melt_meas} above. It is the \code{value.name} argument
-in data.table's wide-to-long reshaping tool.}
-
-\item{dcast_for}{The LHS ~ RHS formula to use in data.table's
-\href{https://rdatatable.gitlab.io/data.table/reference/dcast.data.table.html}{decast}
-long-to-wide reshaping tool.}
-
-\item{dcast_var}{A vector of column names/indexes that defines the \code{value.var}
-argument in data.table's long-to-wide dcast.}
+\item{melt_values}{A Vector that assigns a value to each of the consolidated columns.}
 
 \item{key}{A key string issued by the Census Bureau in making data requests.}
 }

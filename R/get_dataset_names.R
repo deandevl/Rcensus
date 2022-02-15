@@ -8,8 +8,8 @@
 #'    \href{https://www.census.gov/data/developers/data-sets.html}{datasets} for
 #'    descriptions.
 #'
-#' @param filter_str A character string by which to filter the dataset names
-#'   containing the string.
+#' @param year The year to select the datasets. If NULL, then all the years are returned.
+#' @param filter_str A character string by which to filter the dataset names column.
 #'
 #' @import data.table httr jsonlite
 #'
@@ -18,7 +18,9 @@
 #' @author Rick Dean
 #'
 #' @export
-get_dataset_names <- function(filter_str = NULL){
+get_dataset_names <- function(
+  year = NULL,
+  filter_str = NULL){
   # Create the url
   a_url <- "https://api.census.gov/data.json"
 
@@ -48,6 +50,10 @@ get_dataset_names <- function(filter_str = NULL){
 
   select_cols <- c("name","vintage","title","url","isTimeseries","description","modified")
   datasets_dt <- datasets_dt[, ..select_cols]
+
+  if(!is.null(year)){
+    datasets_dt <-  datasets_dt[vintage == year]
+  }
 
   if(!is.null(filter_str)){
     datasets_dt <- datasets_dt[grepl(filter_str, datasets_dt$name, fixed = TRUE)]

@@ -4,11 +4,12 @@
 \alias{get_dataset_names}
 \title{get_dataset_names()}
 \usage{
-get_dataset_names(filter_str = NULL)
+get_dataset_names(year = NULL, filter_str = NULL)
 }
 \arguments{
-\item{filter_str}{A character string by which to filter the dataset names
-containing the string.}
+\item{year}{The year to select the datasets. If NULL, then all the years are returned.}
+
+\item{filter_str}{A character string by which to filter the dataset names column.}
 }
 \value{
 A data.table

@@ -9,31 +9,29 @@
 #'
 #' @param dataset A string that sets the name of the data set of interest (e.g. "acs/acs5")
 #' @param vintage An optional numeric that sets the year of interest.
-#' @param vars A string vector of variable names to be acquired.
+#' @param vars Can be either a string vector of variable names to be acquired.
+#'   Also can be a named list of string vectors to separate groups of variables.
+#' @param vars_init A string vector of variable names to append to \code{vars}, The default
+#'   is \code{c("GEO_ID", "NAME")}. Set it to NULL to disregard it.
 #' @param group A string that names the group that has a collection of variables. A dataframe
 #'   is returned in the "long" format with a factor column named "variables" with their respective
 #'   values.
+#' @param group_values A string vector that sets the type of output values.
+#'   Permissible values are "estimate" (for estimates) "moe" (for margin of error).
+#'   The default is \code{c("estimate", "moe")} for both.
 #' @param region A string that specifies the geography of the request.
 #'    See \code{Rcensus::get_geography()} for assistance in obtaining
 #'    these values.
 #' @param regionin A string that sets a qualifier for \code{region}.
 #' @param na_cols If TRUE will remove all rows with missing values. If a
 #'   vector of column names/integers will check their values for missing values.
-#' @param suffixes A vector string where column names ending with the suffixes will be kept.
+#' @param shape A string that sets the shape of the returned dataframe. Permissible
+#'   values are "long" (the default) or "wide".
 #' @param melt_meas A \code{list} that contains character vectors of column names/indexes from
 #'   \code{dataset} to be consolidated. It is the \code{measure.vars} argument in data.table's
 #'   wide-to-long \href{https://rdatatable.gitlab.io/data.table/reference/melt.data.table.html}{melt}
 #'   reshaping tool.
-#' @param melt_var_name A character string (or character vector) that defines the new name(s) of the
-#'   consolidated variable name column.
-#' @param melt_val_name A character string (or character vector) that defines the new name(s) of the
-#'   consolidated value column(s) defined in \code{melt_meas} above. It is the \code{value.name} argument
-#'   in data.table's wide-to-long reshaping tool.
-#' @param dcast_for The LHS ~ RHS formula to use in data.table's
-#'   \href{https://rdatatable.gitlab.io/data.table/reference/dcast.data.table.html}{decast}
-#'   long-to-wide reshaping tool.
-#' @param dcast_var A vector of column names/indexes that defines the \code{value.var}
-#'   argument in data.table's long-to-wide dcast.
+#' @param melt_values A Vector that assigns a value to each of the consolidated columns.
 #' @param key A key string issued by the Census Bureau in making data requests.
 #'
 #' @import data.table httr jsonlite
@@ -47,18 +45,18 @@ get_vintage_data <- function(
   dataset,
   vintage = NULL,
   vars,
+  vars_init = c("GEO_ID", "NAME"),
   group = NULL,
+  group_values = c("estimate", "moe"),
   region = NULL,
   regionin = NULL,
   na_cols = NULL,
-  suffixes = NULL,
+  shape = "long",
   melt_meas = NULL,
-  melt_var_name = "variable",
-  melt_val_name = "value",
-  dcast_for = NULL,
-  dcast_var = NULL,
+  melt_values = NULL,
   key = Sys.getenv("CENSUS_KEY")
 ){
+  dt <- NULL
 
   # Check for key in environment
   key_from_env <- Sys.getenv("CENSUS_KEY")
@@ -69,75 +67,102 @@ get_vintage_data <- function(
   # Create a string url based on the submitted parameters
   a_url <- .get_url(dataset, vintage)
 
-  get_var = NULL
   if(!is.null(group)){
-    get_var = paste0("NAME,group(", group, ")")
-    suffixes = c("E","M")
-  }else {
-    get_var <- paste(vars, sep = "", collapse = ",")
-  }
-
-  resp <- httr::GET(
-    a_url,
-    query = list(
+    # Get the data.table for the group
+    dt <- .get_dt(
+      a_url = a_url,
       key = key,
-      get = get_var,
-      "for" = region,
-      "in" = regionin
+      group = group,
+      vars = NULL,
+      region = region,
+      regionin = regionin
     )
-  )
-  # Check the response as valid JSON
-  check <-  .check_response(resp)
 
-  # Parse the response and return raw JSON
-  raw_json <- .parse_response(resp)
+    # Just get estimates and margin of error columns
+    E_M_list <- .get_E_M_both(dt,group_values)
 
-  dt <- data.table::as.data.table(raw_json)
+    dt <- E_M_list[["dt"]]
 
-  colnames(dt) <- raw_json[1,]
-
-  dt <- dt[-1]
-
-  if(!is.null(suffixes)){
-    dt_colnames <- colnames(dt)
-
-    keep_cols <- endsWith(dt_colnames, suffixes[1])
-    temp_dt <- dt[,..keep_cols]
-
-    for(i in 2:length(suffixes)){
-      keep_cols <- endsWith(dt_colnames, suffixes[i])
-      temp_dt <- cbind(temp_dt, dt[,..keep_cols])
-
+    # Reshape from wide to long
+    if(shape == "long") {
+      if(length(group_values) == 2){
+        dt <- data.table::melt(
+          data = dt,
+          measure = list(E_M_list[["E"]], E_M_list[["M"]]),
+          value.name = c("estimate", "moe")
+        )
+        dt[, variable := factor(variable, levels = 1:length(E_M_list[["E"]]), labels = substr(E_M_list[["E"]],start = 1,stop = 10))]
+        return(dt)
+      }else if(group_values[[1]] == "estimate"){
+        dt <- data.table::melt(
+          data = dt,
+          measure = list(E_M_list[["E"]]),
+          value.name = "estimate"
+        )
+        return(dt)
+      }else if(group_values[[1]] == "moe"){
+        dt <- data.table::melt(
+          data = dt,
+          measure = list(E_M_list[["M"]]),
+          value.name = "moe"
+        )
+      }
     }
-    cols_unique <- unique(colnames(temp_dt))
-    dt <- temp_dt[,..cols_unique]
-  }
+  }else{ # non-group variables
+    var_names <- vars
+    meas <- NULL
 
-  if(!is.null(group)){
-    col_names <- colnames(dt)
-    col_names_E <- col_names[endsWith(col_names, "E")]
-    col_names_E <- col_names_E[!col_names_E %in% c("NAME")]
-    col_names_M <- col_names[endsWith(col_names, "M")]
-    col_names_M <- col_names_M[!col_names_M %in% c("NAME")]
+    if(is.list(vars)){
+      var_names <- unlist(vars)
+      meas <- vars
+    }else{
+      meas <- list(vars)
+    }
 
-    dt <- data.table::melt(
-      data = dt,
-      ids.vars = "NAME",
-      measure = list(col_names_E, col_names_M),
-      value.name = c("Estimate", "MOE")
+    # Get the data.table
+    dt <- .get_dt(
+      a_url = a_url,
+      key = key,
+      group = NULL,
+      vars = var_names,
+      vars_init = vars_init,
+      region = region,
+      regionin = regionin
     )
 
-    dt[, variable := factor(variable, levels = 1:length(col_names_E), labels = substr(col_names_E,start = 1,stop = 10))]
-    dt[, MOE := ifelse(MOE == "-555555555",NA,MOE)]
+    if(!is.null(melt_meas)){
+      shape = "wide"
+    }
+
+    if(shape == "long"){
+      if(is.list(vars)){
+        dt <- data.table::melt(
+          dt,
+          measure = meas
+        )
+
+        var_labels <- c()
+        a_var <- vars[[1]]
+        for(i in seq_along(a_var)){
+          var_labels <- c(var_labels, substr(a_var[[i]], 1, nchar(a_var[[i]])-1))
+        }
+        dt[, variable := factor(variable, levels = 1:length(a_var), labels = var_labels)]
+      }else{
+        dt <- data.table::melt(
+          dt,
+          measure = meas,
+          value.name = c("value")
+        )
+      }
+    }
+
+    if(!is.null(melt_meas)){
+      dt <- data.table::melt(dt, measure = melt_meas)
+      if(!is.null(melt_values)){
+        dt[, variable := factor(variable, levels = 1:length(melt_values), labels = melt_values)]
+      }
+    }
   }
-
-
-  if(!is.null(melt_meas)) {
-    dt <- data.table::melt(dt, measure = melt_meas, variable.name = melt_var_name, value.name = melt_val_name)
-  }else if(!is.null(dcast_for) & !is.null(dcast_var)){
-    dt <- data.table::dcast(dt, formula = dcast_for, value.var = dcast_var)
-  }
-
 
   if(!is.null(na_cols)){
     if(is.logical(na_cols)){
@@ -149,3 +174,4 @@ get_vintage_data <- function(
 
   return(dt)
 }
+

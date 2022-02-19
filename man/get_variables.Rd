@@ -4,28 +4,36 @@
 \alias{get_variables}
 \title{get_variables()}
 \usage{
-get_variables(dataset, vintage = NULL, group = NULL, brief = FALSE)
+get_variables(
+  dataset,
+  vintage = NULL,
+  group = NULL,
+  brief = FALSE,
+  filter_str = NULL
+)
 }
 \arguments{
 \item{dataset}{A string that sets the name of the dataset of interest (e.g. "acs/acs5").
 See \code{Rcensus::get_dataset_names()} for available dataset names.}
 
-\item{vintage}{An optional numeric that sets the year of interest.}
+\item{vintage}{An optional numeric or vector of numerics that sets the year(s) of interest.}
 
 \item{group}{An optional string that sets the group name associated with a set of variables}
 
-\item{brief}{If TRUE out of the 10 columns, will return only columns \code{name}, \code{label}, \code{concept}, \code{predicateType}.}
+\item{brief}{If TRUE out of the 10 columns, will return only columns \code{name}, \code{label}, \code{predicateType}.}
+
+\item{filter_str}{A character string by which to filter the variable IDs.}
 }
 \value{
 A data.table
 }
 \description{
-Function produces a data.table/data frame of variables and their
+Function produces a dataframe of variable IDs and their
 descriptive parameters from the Census Bureau's publicly available
 \href{https://www.census.gov/data/developers/data-sets.html}{datasets}.
 }
 \details{
-Get the names of Census Bureau variables and their descriptive parameters
+Get the variable IDs of Census Bureau and their descriptive parameters
 }
 \author{
 Rick Dean

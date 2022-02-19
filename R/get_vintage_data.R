@@ -8,7 +8,7 @@
 #'   issued from the Bureau.
 #'
 #' @param dataset A string that sets the name of the data set of interest (e.g. "acs/acs5")
-#' @param vintage An optional numeric that sets the year of interest.
+#' @param vintage An optional numeric that sets the vintage of interest.
 #' @param vars Can be either a string vector of variable names to be acquired.
 #'   Also can be a named list of string vectors to separate groups of variables.
 #' @param vars_init A string vector of variable names to append to \code{vars}, The default

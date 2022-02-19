@@ -23,7 +23,7 @@ get_vintage_data(
 \arguments{
 \item{dataset}{A string that sets the name of the data set of interest (e.g. "acs/acs5")}
 
-\item{vintage}{An optional numeric that sets the year of interest.}
+\item{vintage}{An optional numeric that sets the vintage of interest.}
 
 \item{vars}{Can be either a string vector of variable names to be acquired.
 Also can be a named list of string vectors to separate groups of variables.}

@@ -17,6 +17,24 @@ group_var_DP02_dt <- Rcensus::get_variables(
   brief = TRUE
 )
 
+# Get available variables that have "DP02_0068" in their id name
+DP02_0068_dt <- Rcensus::get_variables(
+  dataset = "acs/acs1/profile",
+  vintage = 2019,
+  brief = TRUE,
+  filter_str = "DP02_0068"
+)
+
+# Get available variables that have "DP02_0068" in their id name
+# Use multiple vintages
+# Note that we get entirely different variables between the two years
+DP02_0068_dt <- Rcensus::get_variables(
+  dataset = "acs/acs1/profile",
+  vintage = 2018:2019,
+  brief = TRUE,
+  filter_str = "DP02_0068"
+)
+
 # Get available variables for "pep/components" for 2019
 pep_comp_var_dt <- Rcensus::get_variables(
   dataset = "pep/components",
